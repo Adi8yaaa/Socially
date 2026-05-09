@@ -3,27 +3,39 @@
 import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { checkConnectivity } from "@/utils/connectivityCheck";
 
-export async function syncUser() {
+// actions/user.action.ts
+export async function syncUser(retries = 3) {
   try {
+    await checkConnectivity();
+
     const { userId } = await auth();
     const user = await currentUser();
 
-    if (!userId || !user) return;
+    if (!user || !userId) {
+      if (retries > 0) {
+        await new Promise((res) => setTimeout(res, 500)); // Small delay
+        return await syncUser(retries - 1);
+      }
+      console.error("Max retries reached in syncUser.");
+      return null;
+    }
 
     const existingUser = await prisma.user.findUnique({
-      where: {
-        clerkId: userId,
-      },
+      where: { clerkId: userId },
     });
 
-    if (existingUser) return existingUser;
+    if (existingUser) {
+      return existingUser;
+    }
 
     const dbUser = await prisma.user.create({
       data: {
         clerkId: userId,
         name: `${user.firstName || ""} ${user.lastName || ""}`,
-        username: user.username ?? user.emailAddresses[0].emailAddress.split("@")[0],
+        username:
+          user.username ?? user.emailAddresses[0].emailAddress.split("@")[0],
         email: user.emailAddresses[0].emailAddress,
         image: user.imageUrl,
       },
@@ -31,7 +43,13 @@ export async function syncUser() {
 
     return dbUser;
   } catch (error) {
-    console.log("Error in syncUser", error);
+    console.error("Error in syncUser:", error);
+    if (retries > 0) {
+      console.log(`Trying again... (${retries} remaining attempts)`);
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before trying again
+      return syncUser(retries - 1);
+    }
+    return null;
   }
 }
 
