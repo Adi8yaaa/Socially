@@ -5,7 +5,7 @@ import { SignInButton, UserButton } from "@clerk/nextjs";
 import ModeToggle from "./ModeToggle";
 import { currentUser } from "@clerk/nextjs/server";
 
-async function DesktopNavbar() {
+async function DesktopNavbar({ username }: { username?: string }) {
   const user = await currentUser();
 
   return (
@@ -30,7 +30,7 @@ async function DesktopNavbar() {
           <Button variant="ghost" className="flex items-center gap-2" asChild>
             <Link
               href={`/profile/${
-                user.username ?? user.emailAddresses[0].emailAddress.split("@")[0]
+                username ?? user.username ?? user.emailAddresses[0].emailAddress.split("@")[0]
               }`}
             >
               <UserIcon className="w-4 h-4" />
