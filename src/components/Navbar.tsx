@@ -6,7 +6,8 @@ import { syncUser } from "@/actions/user.action";
 
 async function Navbar() {
   const user = await currentUser();
-  if (user) await syncUser(); // POST
+  const dbUser = user ? await syncUser() : null;
+  const username = dbUser?.username;
 
   return (
     <nav className="sticky top-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
@@ -18,8 +19,8 @@ async function Navbar() {
             </Link>
           </div>
 
-          <DesktopNavbar />
-          <MobileNavbar />
+          <DesktopNavbar username={username} />
+          <MobileNavbar username={username} />
         </div>
       </div>
     </nav>
