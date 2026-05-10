@@ -22,11 +22,23 @@ export async function syncUser(retries = 3) {
       return null;
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
+    let existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { clerkId: userId },
+          { email: user.emailAddresses[0].emailAddress }
+        ]
+      },
     });
 
     if (existingUser) {
+      // If the user exists but the clerkId is different, update it.
+      if (existingUser.clerkId !== userId) {
+        existingUser = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { clerkId: userId },
+        });
+      }
       return existingUser;
     }
 
