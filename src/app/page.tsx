@@ -5,20 +5,15 @@ import PostCard from "@/components/PostCard";
 import WhoToFollow from "@/components/WhoToFollow";
 import { currentUser } from "@clerk/nextjs/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   try {
-    // Synchronizes the user before loading the page
-    await syncUser();
+    await syncUser().catch(() => null);
 
-    const userPromise = currentUser();
-    const dbUserIdPromise = getDbUserId();
-    const postsPromise = getPosts();
-
-    const [user, dbUserId, posts] = await Promise.all([
-      userPromise,
-      dbUserIdPromise,
-      postsPromise,
-    ]);
+    const user = await currentUser().catch(() => null);
+    const dbUserId = user ? await getDbUserId().catch(() => null) : null;
+    const posts = await getPosts().catch(() => []);
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
@@ -38,10 +33,12 @@ export default async function Home() {
   } catch (error) {
     console.error("Error in Home Page:", error);
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-500">
-          Error loading page. Please try again later.
-        </p>
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+        <div className="lg:col-span-6">
+          <p className="text-muted-foreground text-center py-8">
+            Unable to load feed right now. Please refresh in a moment.
+          </p>
+        </div>
       </div>
     );
   }

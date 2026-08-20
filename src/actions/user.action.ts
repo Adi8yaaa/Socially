@@ -114,14 +114,16 @@ export async function getUserByClerkId(clerkId: string) {
 }
 
 export async function getDbUserId() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return null;
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return null;
 
-  const user = await getUserByClerkId(clerkId);
-
-  if (!user) throw new Error("User not found");
-
-  return user.id;
+    const user = await getUserByClerkId(clerkId);
+    return user?.id ?? null;
+  } catch (error) {
+    console.error("Error in getDbUserId:", error);
+    return null;
+  }
 }
 
 export async function getRandomUsers() {
