@@ -41,30 +41,37 @@ export async function createCollection(input: { name: string; description?: stri
 }
 
 export async function getBookmarkDashboard() {
-  const userId = await getDbUserId();
-  if (!userId) return { bookmarks: [], collections: [] };
+  try {
+    const userId = await getDbUserId().catch(() => null);
+    if (!userId) return { bookmarks: [], collections: [] };
 
-  const [bookmarks, collections] = await Promise.all([
-    prisma.bookmark.findMany({
-      where: { userId },
-      include: {
-        collection: true,
-        post: {
+    const [bookmarks, collections] = await Promise.all([
+      prisma.bookmark
+        .findMany({
+          where: { userId },
           include: {
-            author: { select: { id: true, name: true, username: true, image: true, isVerified: true } },
-            media: { orderBy: { order: "asc" } },
-            _count: { select: { likes: true, comments: true, bookmarks: true, reposts: true } },
+            post: {
+              include: {
+                author: { select: { id: true, name: true, username: true, image: true } },
+                _count: { select: { likes: true, comments: true } },
+              },
+            },
           },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.collection.findMany({
-      where: { ownerId: userId },
-      include: { _count: { select: { bookmarks: true } } },
-      orderBy: { updatedAt: "desc" },
-    }),
-  ]);
+          orderBy: { createdAt: "desc" },
+        })
+        .catch(() => []),
+      prisma.collection
+        .findMany({
+          where: { ownerId: userId },
+          include: { _count: { select: { bookmarks: true } } },
+          orderBy: { updatedAt: "desc" },
+        })
+        .catch(() => []),
+    ]);
 
-  return { bookmarks, collections };
+    return { bookmarks, collections };
+  } catch (error) {
+    console.error("Error in getBookmarkDashboard:", error);
+    return { bookmarks: [], collections: [] };
+  }
 }

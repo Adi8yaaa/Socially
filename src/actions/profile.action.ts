@@ -16,16 +16,8 @@ export async function getProfileByUsername(username: string) {
         username: true,
         bio: true,
         image: true,
-        coverImage: true,
         location: true,
         website: true,
-        socialLinks: true,
-        skills: true,
-        interests: true,
-        isVerified: true,
-        isPrivate: true,
-        allowMessages: true,
-        showActivity: true,
         createdAt: true,
         _count: {
           select: {
@@ -40,7 +32,7 @@ export async function getProfileByUsername(username: string) {
     return user;
   } catch (error) {
     console.error("Error fetching profile:", error);
-    throw new Error("Failed to fetch profile");
+    return null;
   }
 }
 
@@ -56,13 +48,7 @@ export async function getUserPosts(userId: string) {
             id: true,
             name: true,
             username: true,
-              image: true,
-              isVerified: true,
-            },
-        },
-        media: {
-          orderBy: {
-            order: "asc",
+            image: true,
           },
         },
         comments: {
@@ -85,24 +71,10 @@ export async function getUserPosts(userId: string) {
             userId: true,
           },
         },
-        reactions: {
-          select: {
-            userId: true,
-            type: true,
-          },
-        },
-        reactionCounts: true,
-        bookmarks: {
-          select: {
-            userId: true,
-          },
-        },
         _count: {
           select: {
             likes: true,
             comments: true,
-            bookmarks: true,
-            reposts: true,
           },
         },
       },
@@ -114,7 +86,7 @@ export async function getUserPosts(userId: string) {
     return posts;
   } catch (error) {
     console.error("Error fetching user posts:", error);
-    throw new Error("Failed to fetch user posts");
+    return [];
   }
 }
 
@@ -134,13 +106,7 @@ export async function getUserLikedPosts(userId: string) {
             id: true,
             name: true,
             username: true,
-              image: true,
-              isVerified: true,
-            },
-        },
-        media: {
-          orderBy: {
-            order: "asc",
+            image: true,
           },
         },
         comments: {
@@ -163,24 +129,10 @@ export async function getUserLikedPosts(userId: string) {
             userId: true,
           },
         },
-        reactions: {
-          select: {
-            userId: true,
-            type: true,
-          },
-        },
-        reactionCounts: true,
-        bookmarks: {
-          select: {
-            userId: true,
-          },
-        },
         _count: {
           select: {
             likes: true,
             comments: true,
-            bookmarks: true,
-            reposts: true,
           },
         },
       },
@@ -192,7 +144,7 @@ export async function getUserLikedPosts(userId: string) {
     return likedPosts;
   } catch (error) {
     console.error("Error fetching liked posts:", error);
-    throw new Error("Failed to fetch liked posts");
+    return [];
   }
 }
 

@@ -29,6 +29,17 @@ export async function syncUser(retries = 3) {
           { email: user.emailAddresses[0].emailAddress }
         ]
       },
+      select: {
+        id: true,
+        clerkId: true,
+        email: true,
+        username: true,
+        name: true,
+        image: true,
+        bio: true,
+        location: true,
+        website: true,
+      },
     });
 
     if (existingUser) {
@@ -36,12 +47,18 @@ export async function syncUser(retries = 3) {
       if (existingUser.clerkId !== userId) {
         existingUser = await prisma.user.update({
           where: { id: existingUser.id },
-          data: { clerkId: userId, lastSeenAt: new Date() },
-        });
-      } else {
-        await prisma.user.update({
-          where: { id: existingUser.id },
-          data: { lastSeenAt: new Date() },
+          data: { clerkId: userId },
+          select: {
+            id: true,
+            clerkId: true,
+            email: true,
+            username: true,
+            name: true,
+            image: true,
+            bio: true,
+            location: true,
+            website: true,
+          },
         });
       }
       return existingUser;
@@ -76,7 +93,15 @@ export async function getUserByClerkId(clerkId: string) {
     where: {
       clerkId,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      image: true,
+      bio: true,
+      location: true,
+      website: true,
       _count: {
         select: {
           followers: true,

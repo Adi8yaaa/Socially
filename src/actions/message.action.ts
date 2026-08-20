@@ -6,43 +6,57 @@ import { revalidatePath } from "next/cache";
 import { getDbUserId } from "./user.action";
 
 export async function getConversations() {
-  const userId = await getDbUserId();
-  if (!userId) return [];
+  try {
+    const userId = await getDbUserId().catch(() => null);
+    if (!userId) return [];
 
-  return prisma.conversation.findMany({
-    where: { participants: { some: { userId } } },
-    include: {
-      participants: {
-        include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true, allowMessages: true } } },
-      },
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        include: { sender: { select: { id: true, username: true, image: true } }, reads: true },
-      },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+    return await prisma.conversation
+      .findMany({
+        where: { participants: { some: { userId } } },
+        include: {
+          participants: {
+            include: { user: { select: { id: true, name: true, username: true, image: true } } },
+          },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: { sender: { select: { id: true, username: true, image: true } } },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+      })
+      .catch(() => []);
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    return [];
+  }
 }
 
 export async function getConversation(conversationId: string) {
-  const userId = await getDbUserId();
-  if (!userId) return null;
+  try {
+    const userId = await getDbUserId().catch(() => null);
+    if (!userId) return null;
 
-  const conversation = await prisma.conversation.findFirst({
-    where: { id: conversationId, participants: { some: { userId } } },
-    include: {
-      participants: { include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true } } } },
-      messages: {
-        orderBy: { createdAt: "asc" },
-        include: { sender: { select: { id: true, name: true, username: true, image: true } }, reads: true },
-        take: 100,
-      },
-    },
-  });
+    const conversation = await prisma.conversation
+      .findFirst({
+        where: { id: conversationId, participants: { some: { userId } } },
+        include: {
+          participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
+          messages: {
+            orderBy: { createdAt: "asc" },
+            include: { sender: { select: { id: true, name: true, username: true, image: true } } },
+            take: 100,
+          },
+        },
+      })
+      .catch(() => null);
 
-  if (conversation) await markConversationRead(conversation.id);
-  return conversation;
+    if (conversation) await markConversationRead(conversation.id).catch(() => null);
+    return conversation;
+  } catch (error) {
+    console.error("Error fetching conversation:", error);
+    return null;
+  }
 }
 
 export async function sendMessage(input: {

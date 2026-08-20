@@ -36,20 +36,6 @@ export async function getNotifications(take = 20) {
             createdAt: true,
           },
         },
-        message: {
-          select: {
-            id: true,
-            content: true,
-            mediaUrl: true,
-          },
-        },
-        story: {
-          select: {
-            id: true,
-            mediaUrl: true,
-            caption: true,
-          },
-        },
       },
       orderBy: {
         createdAt: "desc",
@@ -60,7 +46,7 @@ export async function getNotifications(take = 20) {
     return notifications;
   } catch (error) {
     console.error("Error fetching notifications:", error);
-    throw new Error("Failed to fetch notifications");
+    return [];
   }
 }
 
