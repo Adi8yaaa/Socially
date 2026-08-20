@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getDbUserId } from "./user.action";
+import { profileInputSchema } from "@/lib/validators";
 
 export async function getProfileByUsername(username: string) {
   try {
@@ -15,8 +16,16 @@ export async function getProfileByUsername(username: string) {
         username: true,
         bio: true,
         image: true,
+        coverImage: true,
         location: true,
         website: true,
+        socialLinks: true,
+        skills: true,
+        interests: true,
+        isVerified: true,
+        isPrivate: true,
+        allowMessages: true,
+        showActivity: true,
         createdAt: true,
         _count: {
           select: {
@@ -47,7 +56,13 @@ export async function getUserPosts(userId: string) {
             id: true,
             name: true,
             username: true,
-            image: true,
+              image: true,
+              isVerified: true,
+            },
+        },
+        media: {
+          orderBy: {
+            order: "asc",
           },
         },
         comments: {
@@ -70,10 +85,24 @@ export async function getUserPosts(userId: string) {
             userId: true,
           },
         },
+        reactions: {
+          select: {
+            userId: true,
+            type: true,
+          },
+        },
+        reactionCounts: true,
+        bookmarks: {
+          select: {
+            userId: true,
+          },
+        },
         _count: {
           select: {
             likes: true,
             comments: true,
+            bookmarks: true,
+            reposts: true,
           },
         },
       },
@@ -105,7 +134,13 @@ export async function getUserLikedPosts(userId: string) {
             id: true,
             name: true,
             username: true,
-            image: true,
+              image: true,
+              isVerified: true,
+            },
+        },
+        media: {
+          orderBy: {
+            order: "asc",
           },
         },
         comments: {
@@ -128,10 +163,24 @@ export async function getUserLikedPosts(userId: string) {
             userId: true,
           },
         },
+        reactions: {
+          select: {
+            userId: true,
+            type: true,
+          },
+        },
+        reactionCounts: true,
+        bookmarks: {
+          select: {
+            userId: true,
+          },
+        },
         _count: {
           select: {
             likes: true,
             comments: true,
+            bookmarks: true,
+            reposts: true,
           },
         },
       },
@@ -156,15 +205,34 @@ export async function updateProfile(formData: FormData) {
     const bio = formData.get("bio") as string;
     const location = formData.get("location") as string;
     const website = formData.get("website") as string;
+    const coverImage = formData.get("coverImage") as string;
+    const skills = ((formData.get("skills") as string) || "")
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+    const interests = ((formData.get("interests") as string) || "")
+      .split(",")
+      .map((interest) => interest.trim())
+      .filter(Boolean);
+    const isPrivate = formData.get("isPrivate") === "on";
+    const allowMessages = formData.get("allowMessages") !== "off";
+    const showActivity = formData.get("showActivity") !== "off";
+    const parsed = profileInputSchema.parse({
+      name,
+      bio,
+      location,
+      website,
+      coverImage,
+      skills,
+      interests,
+      isPrivate,
+      allowMessages,
+      showActivity,
+    });
 
     const user = await prisma.user.update({
       where: { clerkId },
-      data: {
-        name,
-        bio,
-        location,
-        website,
-      },
+      data: parsed,
     });
 
     revalidatePath("/profile");

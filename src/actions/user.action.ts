@@ -3,12 +3,12 @@
 import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { checkConnectivity } from "@/utils/connectivityCheck";
+
 
 // actions/user.action.ts
 export async function syncUser(retries = 3) {
   try {
-    await checkConnectivity();
+
 
     const { userId } = await auth();
     const user = await currentUser();
@@ -36,7 +36,12 @@ export async function syncUser(retries = 3) {
       if (existingUser.clerkId !== userId) {
         existingUser = await prisma.user.update({
           where: { id: existingUser.id },
-          data: { clerkId: userId },
+          data: { clerkId: userId, lastSeenAt: new Date() },
+        });
+      } else {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { lastSeenAt: new Date() },
         });
       }
       return existingUser;
@@ -50,6 +55,7 @@ export async function syncUser(retries = 3) {
           user.username ?? user.emailAddresses[0].emailAddress.split("@")[0],
         email: user.emailAddresses[0].emailAddress,
         image: user.imageUrl,
+        lastSeenAt: new Date(),
       },
     });
 
@@ -120,6 +126,7 @@ export async function getRandomUsers() {
         name: true,
         username: true,
         image: true,
+        isVerified: true,
         _count: {
           select: {
             followers: true,

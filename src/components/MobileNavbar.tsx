@@ -2,10 +2,14 @@
 
 import {
   BellIcon,
+  BookmarkIcon,
+  CompassIcon,
   HomeIcon,
   LogOutIcon,
   MenuIcon,
+  MessageCircleIcon,
   MoonIcon,
+  SearchIcon,
   SunIcon,
   UserIcon,
 } from "lucide-react";
@@ -61,6 +65,30 @@ function MobileNavbar({ username }: { username?: string }) {
 
             {isSignedIn ? (
               <>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/explore">
+                    <CompassIcon className="w-4 h-4" />
+                    Explore
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/search">
+                    <SearchIcon className="w-4 h-4" />
+                    Search
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/messages">
+                    <MessageCircleIcon className="w-4 h-4" />
+                    Messages
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/bookmarks">
+                    <BookmarkIcon className="w-4 h-4" />
+                    Saved
+                  </Link>
+                </Button>
                 <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
                   <Link href="/notifications">
                     <BellIcon className="w-4 h-4" />
