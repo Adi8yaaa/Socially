@@ -56,6 +56,7 @@ export async function getBookmarkDashboard() {
                 _count: { select: { likes: true, comments: true } },
               },
             },
+            collection: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "desc" },
         })

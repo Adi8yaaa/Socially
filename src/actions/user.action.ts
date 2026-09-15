@@ -3,12 +3,12 @@
 import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-
+import { checkConnectivity } from "@/utils/connectivityCheck";
 
 // actions/user.action.ts
 export async function syncUser(retries = 3) {
   try {
-
+    await checkConnectivity();
 
     const { userId } = await auth();
     const user = await currentUser();
