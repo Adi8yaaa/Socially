@@ -5,6 +5,7 @@ import { commentInputSchema, postInputSchema } from "@/lib/validators";
 import { Prisma, ReactionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getDbUserId } from "./user.action";
+import { rankTrendingPosts } from "@/lib/ranking";
 
 const mentionRegex = /(^|\s)@([a-zA-Z0-9_]{2,30})/g;
 const hashtagRegex = /(^|\s)#([a-zA-Z0-9_]{2,50})/g;
@@ -168,59 +169,59 @@ export async function getPosts(mode: "recent" | "trending" | "following" | "like
           ).map((follow) => follow.followingId).concat(userId)
         : [];
 
-    const rawPosts = await prisma.post
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const whereClause: Prisma.PostWhereInput =
+      mode === "following"
+        ? { authorId: { in: followingIds } }
+        : mode === "liked" && userId
+        ? { likes: { some: { userId } } }
+        : mode === "trending"
+        ? { status: "PUBLISHED", createdAt: { gte: sevenDaysAgo } }
+        : {};
+
+    let rawPosts = await prisma.post
       .findMany({
-        where: mode === "following" ? { authorId: { in: followingIds } } : {},
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              image: true,
-            },
-          },
-          comments: {
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  username: true,
-                  image: true,
-                },
-              },
-            },
-            orderBy: { createdAt: "asc" },
-          },
-          likes: { select: { userId: true } },
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
-            },
-          },
-        },
+        where: whereClause,
+        include: postInclude,
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: mode === "trending" ? 50 : 50,
       })
       .catch(() => []);
 
-    return rawPosts.map((post) => ({
+    // Fallback for trending if few posts in last 7 days
+    if (mode === "trending" && rawPosts.length < 5) {
+      rawPosts = await prisma.post
+        .findMany({
+          where: { status: "PUBLISHED" },
+          include: postInclude,
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+        .catch(() => []);
+    }
+
+    let posts = rawPosts.map((post) => ({
       ...post,
       likes: post.likes ?? [],
       comments: post.comments ?? [],
-      bookmarks: (post as any).bookmarks ?? [],
-      reactions: (post as any).reactions ?? [],
-      reactionCounts: (post as any).reactionCounts ?? [],
-      shareCount: (post as any).shareCount ?? 0,
+      bookmarks: post.bookmarks ?? [],
+      reactions: post.reactions ?? [],
+      reactionCounts: post.reactionCounts ?? [],
+      shareCount: post.shareCount ?? 0,
       _count: {
         likes: post._count?.likes ?? 0,
         comments: post._count?.comments ?? 0,
-        bookmarks: (post._count as any)?.bookmarks ?? 0,
-        reposts: (post._count as any)?.reposts ?? 0,
+        bookmarks: post._count?.bookmarks ?? 0,
+        reposts: post._count?.reposts ?? 0,
       },
     }));
+
+    if (mode === "trending") {
+      posts = rankTrendingPosts(posts);
+    }
+
+    return posts;
   } catch (error) {
     console.error("Error in getPosts", error);
     return [];

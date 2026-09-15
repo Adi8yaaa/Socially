@@ -15,7 +15,7 @@ export async function getConversations() {
         where: { participants: { some: { userId } } },
         include: {
           participants: {
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
+            include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true } } },
           },
           messages: {
             orderBy: { createdAt: "desc" },
@@ -41,10 +41,15 @@ export async function getConversation(conversationId: string) {
       .findFirst({
         where: { id: conversationId, participants: { some: { userId } } },
         include: {
-          participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
+          participants: {
+            include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true } } },
+          },
           messages: {
             orderBy: { createdAt: "asc" },
-            include: { sender: { select: { id: true, name: true, username: true, image: true } } },
+            include: {
+              sender: { select: { id: true, name: true, username: true, image: true } },
+              reads: true,
+            },
             take: 100,
           },
         },
@@ -56,6 +61,51 @@ export async function getConversation(conversationId: string) {
   } catch (error) {
     console.error("Error fetching conversation:", error);
     return null;
+  }
+}
+
+export async function getOrCreateConversation(recipientId: string) {
+  try {
+    const userId = await getDbUserId();
+    if (!userId) return { success: false, error: "Unauthorized" };
+    if (userId === recipientId) return { success: false, error: "Cannot message yourself" };
+
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { id: true, allowMessages: true, name: true, username: true },
+    });
+    if (!recipient) return { success: false, error: "User not found" };
+    if (!recipient.allowMessages) return { success: false, error: "User is not accepting messages" };
+
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        AND: [
+          { participants: { some: { userId } } },
+          { participants: { some: { userId: recipientId } } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return { success: true, conversationId: existing.id };
+    }
+
+    const newConversation = await prisma.conversation.create({
+      data: {
+        ownerId: userId,
+        participants: {
+          create: [{ userId }, { userId: recipientId }],
+        },
+      },
+      select: { id: true },
+    });
+
+    revalidatePath("/messages");
+    return { success: true, conversationId: newConversation.id };
+  } catch (error) {
+    console.error("Error in getOrCreateConversation:", error);
+    return { success: false, error: "Failed to initiate conversation" };
   }
 }
 
@@ -93,7 +143,7 @@ export async function sendMessage(input: {
       });
     });
 
-    const message = await prisma.$transaction(async (tx) => {
+    const { created, recipientIds } = await prisma.$transaction(async (tx) => {
       const created = await tx.message.create({
         data: {
           conversationId: conversation.id,
@@ -102,6 +152,10 @@ export async function sendMessage(input: {
           mediaUrl: parsed.mediaUrl || undefined,
           mediaType: parsed.mediaType,
           reads: { create: { userId } },
+        },
+        include: {
+          sender: { select: { id: true, name: true, username: true, image: true } },
+          reads: true,
         },
       });
 
@@ -117,11 +171,11 @@ export async function sendMessage(input: {
           }),
         ),
       );
-      return created;
+      return { created, recipientIds: recipients.map((r) => r.userId) };
     });
 
     revalidatePath("/messages");
-    return { success: true, conversationId: conversation.id, message };
+    return { success: true, conversationId: conversation.id, message: created, recipientIds };
   } catch (error) {
     console.error("Error sending message:", error);
     return { success: false, error: "Failed to send message" };

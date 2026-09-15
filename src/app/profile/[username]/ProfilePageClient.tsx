@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInButton, useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
+import Link from "next/link";
 import {
   CalendarIcon,
   EditIcon,
@@ -27,6 +28,7 @@ import {
   HeartIcon,
   LinkIcon,
   MapPinIcon,
+  MessageCircleIcon,
 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -137,14 +139,22 @@ function ProfilePageClient({
                     Edit Profile
                   </Button>
                 ) : (
-                  <Button
-                    className="w-full mt-4"
-                    onClick={handleFollow}
-                    disabled={isUpdatingFollow}
-                    variant={isFollowing ? "outline" : "default"}
-                  >
-                    {isFollowing ? "Unfollow" : "Follow"}
-                  </Button>
+                  <div className="flex gap-2 w-full mt-4">
+                    <Button
+                      className="flex-1"
+                      onClick={handleFollow}
+                      disabled={isUpdatingFollow}
+                      variant={isFollowing ? "outline" : "default"}
+                    >
+                      {isFollowing ? "Unfollow" : "Follow"}
+                    </Button>
+                    <Button variant="secondary" className="flex-1" asChild>
+                      <Link href={`/messages?userId=${user.id}`}>
+                        <MessageCircleIcon className="size-4 mr-2" />
+                        Message
+                      </Link>
+                    </Button>
+                  </div>
                 )}
 
                 {/* LOCATION & WEBSITE */}
@@ -203,7 +213,7 @@ function ProfilePageClient({
           <TabsContent value="posts" className="mt-6">
             <div className="space-y-6">
               {posts.length > 0 ? (
-                posts.map((post) => <PostCard key={post.id} post={post} dbUserId={user.id} />)
+                posts.map((post) => <PostCard key={post.id} post={post as any} dbUserId={user.id} />)
               ) : (
                 <div className="text-center py-8 text-muted-foreground">No posts yet</div>
               )}
@@ -213,7 +223,7 @@ function ProfilePageClient({
           <TabsContent value="likes" className="mt-6">
             <div className="space-y-6">
               {likedPosts.length > 0 ? (
-                likedPosts.map((post) => <PostCard key={post.id} post={post} dbUserId={user.id} />)
+                likedPosts.map((post) => <PostCard key={post.id} post={post as any} dbUserId={user.id} />)
               ) : (
                 <div className="text-center py-8 text-muted-foreground">No liked posts to show</div>
               )}
