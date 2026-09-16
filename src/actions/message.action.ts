@@ -103,9 +103,9 @@ export async function getOrCreateConversation(recipientId: string) {
 
     revalidatePath("/messages");
     return { success: true, conversationId: newConversation.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in getOrCreateConversation:", error);
-    return { success: false, error: "Failed to initiate conversation" };
+    return { success: false, error: error?.message || "Failed to initiate conversation" };
   }
 }
 
@@ -176,9 +176,9 @@ export async function sendMessage(input: {
 
     revalidatePath("/messages");
     return { success: true, conversationId: conversation.id, message: created, recipientIds };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending message:", error);
-    return { success: false, error: "Failed to send message" };
+    return { success: false, error: error?.message || "Failed to send message" };
   }
 }
 

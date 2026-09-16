@@ -5,6 +5,7 @@ import { createComment, deletePost, getPosts, repost, setReaction, toggleLike } 
 import { SignInButton, useUser } from "@clerk/nextjs";
 import type React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Card, CardContent } from "./ui/card";
 import Link from "next/link";
@@ -43,6 +44,7 @@ const reactionOptions: { type: Reaction; label: string; icon: React.ReactNode }[
 
 function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
   const { user } = useUser();
+  const router = useRouter();
   const [newComment, setNewComment] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
@@ -117,6 +119,7 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
       if (result?.success) {
         toast.success("Comment posted successfully");
         setNewComment("");
+        router.refresh();
       }
     } catch (error) {
       toast.error("Failed to add comment");
@@ -130,8 +133,10 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
     try {
       setIsDeleting(true);
       const result = await deletePost(post.id);
-      if (result.success) toast.success("Post deleted successfully");
-      else throw new Error(result.error);
+      if (result.success) {
+        toast.success("Post deleted successfully");
+        router.refresh();
+      } else throw new Error(result.error);
     } catch (error) {
       toast.error("Failed to delete post");
     } finally {

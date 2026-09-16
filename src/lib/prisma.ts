@@ -1,10 +1,7 @@
-import { PrismaNeonHttp } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
-  const connectionString = process.env.DATABASE_URL!;
-  const adapter = new PrismaNeonHttp(connectionString, {} as any);
-  return new PrismaClient({ adapter });
+  return new PrismaClient();
 };
 
 declare const globalThis: {

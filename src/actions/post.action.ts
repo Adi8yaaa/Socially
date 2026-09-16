@@ -154,6 +154,43 @@ const postInclude = {
   },
 };
 
+const basicPostInclude = {
+  author: {
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      isVerified: true,
+    },
+  },
+  comments: {
+    include: {
+      author: {
+        select: {
+          id: true,
+          username: true,
+          image: true,
+          name: true,
+          isVerified: true,
+        },
+      },
+      likes: { select: { userId: true } },
+    },
+    orderBy: { createdAt: "asc" as const },
+    take: 20,
+  },
+  likes: { select: { userId: true } },
+  _count: {
+    select: {
+      likes: true,
+      comments: true,
+    },
+  },
+};
+
+type RawPost = Prisma.PostGetPayload<{ include: typeof postInclude }>;
+
 export async function getPosts(mode: "recent" | "trending" | "following" | "liked" = "recent") {
   try {
     const userId = await getDbUserId().catch(() => null);
@@ -180,31 +217,58 @@ export async function getPosts(mode: "recent" | "trending" | "following" | "like
         ? { status: "PUBLISHED", createdAt: { gte: sevenDaysAgo } }
         : {};
 
-    let rawPosts = await prisma.post
-      .findMany({
+    let rawPosts: RawPost[] = [];
+    try {
+      rawPosts = await prisma.post.findMany({
         where: whereClause,
         include: postInclude,
         orderBy: { createdAt: "desc" },
-        take: mode === "trending" ? 50 : 50,
-      })
-      .catch(() => []);
+        take: 50,
+      });
+    } catch (primaryErr) {
+      console.warn("Primary getPosts query failed (unmigrated table or schema mismatch), trying fallback query:", primaryErr);
+      try {
+        rawPosts = (await prisma.post.findMany({
+          where: mode === "following" ? { authorId: { in: followingIds } } : {},
+          include: basicPostInclude,
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })) as unknown as RawPost[];
+      } catch (fallbackErr) {
+        console.error("Fallback getPosts query also failed:", fallbackErr);
+        rawPosts = [];
+      }
+    }
 
     // Fallback for trending if few posts in last 7 days
     if (mode === "trending" && rawPosts.length < 5) {
-      rawPosts = await prisma.post
-        .findMany({
+      try {
+        rawPosts = await prisma.post.findMany({
           where: { status: "PUBLISHED" },
           include: postInclude,
           orderBy: { createdAt: "desc" },
           take: 50,
-        })
-        .catch(() => []);
+        });
+      } catch {
+        rawPosts = (await prisma.post
+          .findMany({
+            where: {},
+            include: basicPostInclude,
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          })
+          .catch(() => rawPosts)) as unknown as RawPost[];
+      }
     }
 
     let posts = rawPosts.map((post) => ({
       ...post,
+      media: post.media ?? [],
       likes: post.likes ?? [],
-      comments: post.comments ?? [],
+      comments: (post.comments ?? []).map((c) => ({
+        ...c,
+        replies: c.replies ?? [],
+      })),
       bookmarks: post.bookmarks ?? [],
       reactions: post.reactions ?? [],
       reactionCounts: post.reactionCounts ?? [],

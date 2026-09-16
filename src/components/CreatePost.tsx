@@ -2,6 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "./ui/card";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { Textarea } from "./ui/textarea";
@@ -15,6 +16,7 @@ import { getAIContentAssistance } from "@/actions/ai.action";
 
 function CreatePost() {
   const { user } = useUser();
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
@@ -47,6 +49,7 @@ function CreatePost() {
         resetForm();
 
         toast.success(status === "DRAFT" ? "Draft saved" : scheduledFor ? "Post scheduled" : "Post created successfully");
+        router.refresh();
       }
     } catch (error) {
       console.error("Failed to create post:", error);
