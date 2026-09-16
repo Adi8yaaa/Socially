@@ -29,17 +29,6 @@ export async function syncUser(retries = 3) {
           { email: user.emailAddresses[0].emailAddress }
         ]
       },
-      select: {
-        id: true,
-        clerkId: true,
-        email: true,
-        username: true,
-        name: true,
-        image: true,
-        bio: true,
-        location: true,
-        website: true,
-      },
     });
 
     if (existingUser) {
@@ -48,17 +37,6 @@ export async function syncUser(retries = 3) {
         existingUser = await prisma.user.update({
           where: { id: existingUser.id },
           data: { clerkId: userId },
-          select: {
-            id: true,
-            clerkId: true,
-            email: true,
-            username: true,
-            name: true,
-            image: true,
-            bio: true,
-            location: true,
-            website: true,
-          },
         });
       }
       return existingUser;
