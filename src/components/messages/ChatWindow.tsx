@@ -87,8 +87,9 @@ export default function ChatWindow({ conversationId, onBack }: ChatWindowProps) 
     const handleNewMessage = (newMsg: any) => {
       if (newMsg.conversationId === conversationId) {
         setMessages((prev) => {
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
+          const list = Array.isArray(prev) ? prev : [];
+          if (list.some((m) => m.id === newMsg.id)) return list;
+          return [...list, newMsg];
         });
 
         // Mark read if it's from another user
@@ -118,7 +119,7 @@ export default function ChatWindow({ conversationId, onBack }: ChatWindowProps) 
     const handleReadUpdate = (data: { conversationId: string; readerId: string }) => {
       if (data.conversationId === conversationId && data.readerId !== currentDbUserId) {
         setMessages((prev) =>
-          prev.map((msg) => {
+          (Array.isArray(prev) ? prev : []).map((msg) => {
             if (msg.senderId === currentDbUserId) {
               const alreadyRead = msg.reads?.some((r: any) => r.userId === data.readerId);
               if (!alreadyRead) {

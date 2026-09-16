@@ -49,14 +49,14 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [hasLiked, setHasLiked] = useState(post.likes.some((like) => like.userId === dbUserId));
-  const [optimisticLikes, setOptmisticLikes] = useState(post._count.likes);
-  const [hasBookmarked, setHasBookmarked] = useState(post.bookmarks.some((bookmark) => bookmark.userId === dbUserId));
-  const [optimisticBookmarks, setOptimisticBookmarks] = useState(post._count.bookmarks);
+  const [hasLiked, setHasLiked] = useState(post.likes?.some((like) => like.userId === dbUserId) ?? false);
+  const [optimisticLikes, setOptmisticLikes] = useState(post._count?.likes ?? 0);
+  const [hasBookmarked, setHasBookmarked] = useState(post.bookmarks?.some((bookmark) => bookmark.userId === dbUserId) ?? false);
+  const [optimisticBookmarks, setOptimisticBookmarks] = useState(post._count?.bookmarks ?? 0);
   const [selectedReaction, setSelectedReaction] = useState<Reaction | null>(
-    (post.reactions.find((reaction) => reaction.userId === dbUserId)?.type as Reaction | undefined) ?? null,
+    (post.reactions?.find((reaction) => reaction.userId === dbUserId)?.type as Reaction | undefined) ?? null,
   );
-  const [optimisticReposts, setOptimisticReposts] = useState(post._count.reposts + post.shareCount);
+  const [optimisticReposts, setOptimisticReposts] = useState((post._count?.reposts ?? 0) + (post.shareCount ?? 0));
   const [showComments, setShowComments] = useState(false);
 
   const handleLike = async () => {
@@ -67,8 +67,8 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
       setOptmisticLikes((prev) => prev + (hasLiked ? -1 : 1));
       await toggleLike(post.id);
     } catch (error) {
-      setOptmisticLikes(post._count.likes);
-      setHasLiked(post.likes.some((like) => like.userId === dbUserId));
+      setOptmisticLikes(post._count?.likes ?? 0);
+      setHasLiked(post.likes?.some((like) => like.userId === dbUserId) ?? false);
     } finally {
       setIsLiking(false);
     }
@@ -90,7 +90,7 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
     const result = await toggleBookmark(post.id);
     if (!result?.success) {
       setHasBookmarked(hasBookmarked);
-      setOptimisticBookmarks(post._count.bookmarks);
+      setOptimisticBookmarks(post._count?.bookmarks ?? 0);
       toast.error("Failed to update bookmark");
     }
   };
@@ -182,9 +182,9 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
           </div>
 
           {/* POST IMAGE */}
-          {(post.media.length > 0 || post.image) && (
+          {(Boolean(post.media?.length) || Boolean(post.image)) && (
             <div className="grid gap-2">
-              {(post.media.length > 0 ? post.media : [{ id: post.id, url: post.image, type: "IMAGE" }]).map(
+              {((post.media && post.media.length > 0) ? post.media : [{ id: post.id, url: post.image, type: "IMAGE" }]).map(
                 (media) =>
                   media.url &&
                   (media.type === "VIDEO" ? (
@@ -291,7 +291,7 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
             <div className="space-y-4 pt-4 border-t">
               <div className="space-y-4">
                 {/* DISPLAY COMMENTS */}
-                {post.comments.map((comment) => (
+                {(post.comments ?? []).map((comment) => (
                   <div key={comment.id} className="flex space-x-3">
                     <Avatar className="size-8 flex-shrink-0">
                       <AvatarImage src={comment.author.image ?? "/avatar.png"} />

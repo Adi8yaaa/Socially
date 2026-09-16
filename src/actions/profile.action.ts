@@ -71,6 +71,11 @@ export async function getUserPosts(userId: string) {
             userId: true,
           },
         },
+        bookmarks: {
+          select: {
+            userId: true,
+          },
+        },
         _count: {
           select: {
             likes: true,
@@ -83,7 +88,22 @@ export async function getUserPosts(userId: string) {
       },
     });
 
-    return posts;
+    return posts.map((post) => ({
+      ...post,
+      media: (post as any).media ?? [],
+      likes: post.likes ?? [],
+      comments: post.comments ?? [],
+      bookmarks: post.bookmarks ?? [],
+      reactions: (post as any).reactions ?? [],
+      reactionCounts: (post as any).reactionCounts ?? [],
+      shareCount: (post as any).shareCount ?? 0,
+      _count: {
+        likes: post._count?.likes ?? 0,
+        comments: post._count?.comments ?? 0,
+        bookmarks: (post._count as any)?.bookmarks ?? 0,
+        reposts: (post._count as any)?.reposts ?? 0,
+      },
+    }));
   } catch (error) {
     console.error("Error fetching user posts:", error);
     return [];
@@ -129,6 +149,11 @@ export async function getUserLikedPosts(userId: string) {
             userId: true,
           },
         },
+        bookmarks: {
+          select: {
+            userId: true,
+          },
+        },
         _count: {
           select: {
             likes: true,
@@ -141,7 +166,22 @@ export async function getUserLikedPosts(userId: string) {
       },
     });
 
-    return likedPosts;
+    return likedPosts.map((post) => ({
+      ...post,
+      media: (post as any).media ?? [],
+      likes: post.likes ?? [],
+      comments: post.comments ?? [],
+      bookmarks: post.bookmarks ?? [],
+      reactions: (post as any).reactions ?? [],
+      reactionCounts: (post as any).reactionCounts ?? [],
+      shareCount: (post as any).shareCount ?? 0,
+      _count: {
+        likes: post._count?.likes ?? 0,
+        comments: post._count?.comments ?? 0,
+        bookmarks: (post._count as any)?.bookmarks ?? 0,
+        reposts: (post._count as any)?.reposts ?? 0,
+      },
+    }));
   } catch (error) {
     console.error("Error fetching liked posts:", error);
     return [];

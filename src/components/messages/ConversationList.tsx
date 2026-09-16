@@ -65,11 +65,11 @@ export default function ConversationList({
     };
   }, [socket]);
 
-  const filteredConversations = conversations.filter((conv) => {
+  const filteredConversations = (conversations || []).filter((conv) => {
     if (!searchFilter.trim()) return true;
     const other =
-      conv.participants.find((p: any) => p.user.id !== currentDbUserId)?.user ||
-      conv.participants[0]?.user;
+      conv.participants?.find((p: any) => p?.user?.id !== currentDbUserId)?.user ||
+      conv.participants?.[0]?.user;
     const name = other?.name?.toLowerCase() || "";
     const username = other?.username?.toLowerCase() || "";
     const term = searchFilter.toLowerCase();
@@ -110,10 +110,10 @@ export default function ConversationList({
         )}
 
         {filteredConversations.map((conversation) => {
-          const latest = conversation.messages[0];
+          const latest = conversation.messages?.[0];
           const other =
-            conversation.participants.find((p: any) => p.user.id !== currentDbUserId)?.user ||
-            conversation.participants[0]?.user;
+            conversation.participants?.find((p: any) => p?.user?.id !== currentDbUserId)?.user ||
+            conversation.participants?.[0]?.user;
 
           const isOnline = other ? isUserOnline(other.id) : false;
           const isSelected = conversation.id === selectedConversationId;
