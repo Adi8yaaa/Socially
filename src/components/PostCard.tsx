@@ -2,7 +2,7 @@
 
 import { toggleBookmark } from "@/actions/bookmark.action";
 import { createComment, deletePost, getPosts, repost, setReaction, toggleLike } from "@/actions/post.action";
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -222,12 +222,14 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
                 <span>{optimisticLikes}</span>
               </Button>
             ) : (
-              <SignInButton mode="modal">
-                <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
-                  <HeartIcon className="size-5" />
-                  <span>{optimisticLikes}</span>
-                </Button>
-              </SignInButton>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
+                    <HeartIcon className="size-5" />
+                    <span>{optimisticLikes}</span>
+                  </Button>
+                </SignInButton>
+              </SignedOut>
             )}
 
             <Button
@@ -345,14 +347,16 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-center p-4 border rounded-lg bg-muted/50">
-                  <SignInButton mode="modal">
-                    <Button variant="outline" className="gap-2">
-                      <LogInIcon className="size-4" />
-                      Sign in to comment
-                    </Button>
-                  </SignInButton>
-                </div>
+                <SignedOut>
+                  <div className="flex justify-center p-4 border rounded-lg bg-muted/50">
+                    <SignInButton mode="modal">
+                      <Button variant="outline" className="gap-2">
+                        <LogInIcon className="size-4" />
+                        Sign in to comment
+                      </Button>
+                    </SignInButton>
+                  </div>
+                </SignedOut>
               )}
             </div>
           )}

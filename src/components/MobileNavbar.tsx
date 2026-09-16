@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
-import { useAuth, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
+import { useAuth, useUser, SignedIn, SignedOut, SignInButton, SignOutButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -109,11 +109,13 @@ function MobileNavbar({ username }: { username?: string }) {
                 </SignOutButton>
               </>
             ) : (
-              <SignInButton mode="modal">
-                <Button variant="default" className="w-full">
-                  Sign In
-                </Button>
-              </SignInButton>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="default" className="w-full">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              </SignedOut>
             )}
           </nav>
         </SheetContent>

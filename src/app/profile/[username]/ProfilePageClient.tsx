@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import Link from "next/link";
 import {
@@ -130,9 +130,11 @@ function ProfilePageClient({
 
                 {/* "FOLLOW & EDIT PROFILE" BUTTONS */}
                 {!currentUser ? (
-                  <SignInButton mode="modal">
-                    <Button className="w-full mt-4">Follow</Button>
-                  </SignInButton>
+                  <SignedOut>
+                    <SignInButton mode="modal">
+                      <Button className="w-full mt-4">Follow</Button>
+                    </SignInButton>
+                  </SignedOut>
                 ) : isOwnProfile ? (
                   <Button className="w-full mt-4" onClick={() => setShowEditDialog(true)}>
                     <EditIcon className="size-4 mr-2" />
