@@ -19,6 +19,8 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Socially",
   description: "A modern social media application powered by Next.js",
