@@ -1,6 +1,8 @@
 import { getUserAnalytics } from "@/actions/analytics.action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage() {
   const analytics = await getUserAnalytics();
 

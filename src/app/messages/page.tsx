@@ -3,6 +3,8 @@ import MessagesContainer from "@/components/messages/MessagesContainer";
 import { Suspense } from "react";
 import { Loader2Icon } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function MessagesPage() {
   const conversations = await getConversations();
 

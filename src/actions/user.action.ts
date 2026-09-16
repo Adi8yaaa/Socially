@@ -56,6 +56,13 @@ export async function syncUser(retries = 3) {
 
     return dbUser;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message?.includes("Dynamic server usage") ||
+        (error as any)?.digest === "DYNAMIC_SERVER_USAGE")
+    ) {
+      throw error;
+    }
     console.error("Error in syncUser:", error);
     if (retries > 0) {
       console.log(`Trying again... (${retries} remaining attempts)`);
@@ -99,6 +106,13 @@ export async function getDbUserId() {
     const user = await getUserByClerkId(clerkId);
     return user?.id ?? null;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message?.includes("Dynamic server usage") ||
+        (error as any)?.digest === "DYNAMIC_SERVER_USAGE")
+    ) {
+      throw error;
+    }
     console.error("Error in getDbUserId:", error);
     return null;
   }

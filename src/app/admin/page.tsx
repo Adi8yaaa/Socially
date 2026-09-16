@@ -1,6 +1,8 @@
 import { getAdminDashboard } from "@/actions/admin.action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   try {
     const dashboard = await getAdminDashboard();

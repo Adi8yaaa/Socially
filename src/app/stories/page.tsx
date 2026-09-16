@@ -3,6 +3,8 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressStoryBar } from "@/components/feed/ProgressStoryBar";
 
+export const dynamic = "force-dynamic";
+
 export default async function StoriesPage() {
   const users = await getActiveStories();
 
