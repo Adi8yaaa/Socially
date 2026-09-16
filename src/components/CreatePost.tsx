@@ -2,35 +2,54 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "./ui/card";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { Textarea } from "./ui/textarea";
-import { ImageIcon, Loader2Icon, SendIcon } from "lucide-react";
+import { BotIcon, ImageIcon, Loader2Icon, SaveIcon, SendIcon } from "lucide-react";
 import { Button } from "./ui/button";
-import { createPost } from "@/actions/post.action";
+import { createPostAdvanced } from "@/actions/post.action";
 import toast from "react-hot-toast";
 import ImageUpload from "./ImageUpload";
+import { Input } from "./ui/input";
+import { getAIContentAssistance } from "@/actions/ai.action";
 
 function CreatePost() {
   const { user } = useUser();
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [scheduledFor, setScheduledFor] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [isAssisting, setIsAssisting] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!content.trim() && !imageUrl) return;
+  const resetForm = () => {
+    setContent("");
+    setImageUrl("");
+    setMediaUrls([]);
+    setScheduledFor("");
+    setShowImageUpload(false);
+  };
+
+  const handleSubmit = async (status: "PUBLISHED" | "DRAFT" | "SCHEDULED" = "PUBLISHED") => {
+    if (!content.trim() && !imageUrl && mediaUrls.length === 0) return;
 
     setIsPosting(true);
     try {
-      const result = await createPost(content, imageUrl);
+      const result = await createPostAdvanced({
+        content,
+        image: imageUrl,
+        mediaUrls: [...(imageUrl ? [imageUrl] : []), ...mediaUrls],
+        scheduledFor: scheduledFor ? new Date(scheduledFor) : undefined,
+        status: scheduledFor ? "SCHEDULED" : status,
+      });
       if (result?.success) {
-        // reset the form
-        setContent("");
-        setImageUrl("");
-        setShowImageUpload(false);
+        resetForm();
 
-        toast.success("Post created successfully");
+        toast.success(status === "DRAFT" ? "Draft saved" : scheduledFor ? "Post scheduled" : "Post created successfully");
+        router.refresh();
       }
     } catch (error) {
       console.error("Failed to create post:", error);
@@ -38,6 +57,15 @@ function CreatePost() {
     } finally {
       setIsPosting(false);
     }
+  };
+
+  const handleAI = async () => {
+    if (!content.trim()) return;
+    setIsAssisting(true);
+    const result = await getAIContentAssistance("improve", content);
+    if (result.success && result.result) setContent(result.result);
+    else toast.error(result.error ?? "AI assistant failed");
+    setIsAssisting(false);
   };
 
   return (
@@ -58,7 +86,7 @@ function CreatePost() {
           </div>
 
           {(showImageUpload || imageUrl) && (
-            <div className="border rounded-lg p-4">
+            <div className="space-y-3 border rounded-lg p-4">
               <ImageUpload
                 endpoint="postImage"
                 value={imageUrl}
@@ -67,11 +95,31 @@ function CreatePost() {
                   if (!url) setShowImageUpload(false);
                 }}
               />
+              <Input
+                placeholder="Add another media URL for carousel, video, or GIF"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    const value = event.currentTarget.value.trim();
+                    if (value) {
+                      setMediaUrls((urls) => [...urls, value]);
+                      event.currentTarget.value = "";
+                    }
+                  }
+                }}
+              />
+              {mediaUrls.length > 0 && (
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  {mediaUrls.map((url) => (
+                    <p key={url} className="truncate">{url}</p>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="flex items-center justify-between border-t pt-4">
-            <div className="flex space-x-2">
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -83,24 +131,41 @@ function CreatePost() {
                 <ImageIcon className="size-4 mr-2" />
                 Photo
               </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={handleAI} disabled={isAssisting || !content.trim()}>
+                <BotIcon className="size-4 mr-2" />
+                {isAssisting ? "Improving..." : "AI"}
+              </Button>
+              <Input
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(event) => setScheduledFor(event.target.value)}
+                className="h-9 w-full sm:w-56"
+                disabled={isPosting}
+              />
             </div>
-            <Button
-              className="flex items-center"
-              onClick={handleSubmit}
-              disabled={(!content.trim() && !imageUrl) || isPosting}
-            >
-              {isPosting ? (
-                <>
-                  <Loader2Icon className="size-4 mr-2 animate-spin" />
-                  Posting...
-                </>
-              ) : (
-                <>
-                  <SendIcon className="size-4 mr-2" />
-                  Post
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => handleSubmit("DRAFT")} disabled={(!content.trim() && !imageUrl && mediaUrls.length === 0) || isPosting}>
+                <SaveIcon className="size-4 mr-2" />
+                Draft
+              </Button>
+              <Button
+                className="flex items-center"
+                onClick={() => handleSubmit(scheduledFor ? "SCHEDULED" : "PUBLISHED")}
+                disabled={(!content.trim() && !imageUrl && mediaUrls.length === 0) || isPosting}
+              >
+                {isPosting ? (
+                  <>
+                    <Loader2Icon className="size-4 mr-2 animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  <>
+                    <SendIcon className="size-4 mr-2" />
+                    {scheduledFor ? "Schedule" : "Post"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

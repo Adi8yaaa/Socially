@@ -50,11 +50,19 @@ export async function syncUser(retries = 3) {
           user.username ?? user.emailAddresses[0].emailAddress.split("@")[0],
         email: user.emailAddresses[0].emailAddress,
         image: user.imageUrl,
+        lastSeenAt: new Date(),
       },
     });
 
     return dbUser;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message?.includes("Dynamic server usage") ||
+        (error as any)?.digest === "DYNAMIC_SERVER_USAGE")
+    ) {
+      throw error;
+    }
     console.error("Error in syncUser:", error);
     if (retries > 0) {
       console.log(`Trying again... (${retries} remaining attempts)`);
@@ -70,7 +78,15 @@ export async function getUserByClerkId(clerkId: string) {
     where: {
       clerkId,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      image: true,
+      bio: true,
+      location: true,
+      website: true,
       _count: {
         select: {
           followers: true,
@@ -83,14 +99,23 @@ export async function getUserByClerkId(clerkId: string) {
 }
 
 export async function getDbUserId() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return null;
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return null;
 
-  const user = await getUserByClerkId(clerkId);
-
-  if (!user) throw new Error("User not found");
-
-  return user.id;
+    const user = await getUserByClerkId(clerkId);
+    return user?.id ?? null;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message?.includes("Dynamic server usage") ||
+        (error as any)?.digest === "DYNAMIC_SERVER_USAGE")
+    ) {
+      throw error;
+    }
+    console.error("Error in getDbUserId:", error);
+    return null;
+  }
 }
 
 export async function getRandomUsers() {
@@ -120,6 +145,7 @@ export async function getRandomUsers() {
         name: true,
         username: true,
         image: true,
+        isVerified: true,
         _count: {
           select: {
             followers: true,

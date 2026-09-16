@@ -9,4 +9,5 @@ export async function checkConnectivity() {
     console.error("Connectivity error:", error);
     throw new Error("Connectivity error with Clerk or NeonDB");
   }
+
 }

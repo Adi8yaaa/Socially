@@ -1,9 +1,10 @@
-import { BellIcon, HomeIcon, UserIcon } from "lucide-react";
+import { BookmarkIcon, CompassIcon, HomeIcon, MessageCircleIcon, SearchIcon, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import ModeToggle from "./ModeToggle";
 import { currentUser } from "@clerk/nextjs/server";
+import NotificationDropdown from "./notifications/NotificationDropdown";
 
 async function DesktopNavbar({ username }: { username?: string }) {
   const user = await currentUser();
@@ -20,13 +21,32 @@ async function DesktopNavbar({ username }: { username?: string }) {
       </Button>
 
       {user ? (
-        <>
+        <SignedIn>
           <Button variant="ghost" className="flex items-center gap-2" asChild>
-            <Link href="/notifications">
-              <BellIcon className="w-4 h-4" />
-              <span className="hidden lg:inline">Notifications</span>
+            <Link href="/explore">
+              <CompassIcon className="w-4 h-4" />
+              <span className="hidden lg:inline">Explore</span>
             </Link>
           </Button>
+          <Button variant="ghost" className="flex items-center gap-2" asChild>
+            <Link href="/search">
+              <SearchIcon className="w-4 h-4" />
+              <span className="hidden lg:inline">Search</span>
+            </Link>
+          </Button>
+          <Button variant="ghost" className="flex items-center gap-2" asChild>
+            <Link href="/messages">
+              <MessageCircleIcon className="w-4 h-4" />
+              <span className="hidden lg:inline">Messages</span>
+            </Link>
+          </Button>
+          <Button variant="ghost" className="flex items-center gap-2" asChild>
+            <Link href="/bookmarks">
+              <BookmarkIcon className="w-4 h-4" />
+              <span className="hidden lg:inline">Saved</span>
+            </Link>
+          </Button>
+          <NotificationDropdown />
           <Button variant="ghost" className="flex items-center gap-2" asChild>
             <Link
               href={`/profile/${
@@ -38,11 +58,13 @@ async function DesktopNavbar({ username }: { username?: string }) {
             </Link>
           </Button>
           <UserButton />
-        </>
+        </SignedIn>
       ) : (
-        <SignInButton mode="modal">
-          <Button variant="default">Sign In</Button>
-        </SignInButton>
+        <SignedOut>
+          <SignInButton mode="modal">
+            <Button variant="default">Sign In</Button>
+          </SignInButton>
+        </SignedOut>
       )}
     </div>
   );

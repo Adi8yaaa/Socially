@@ -2,17 +2,21 @@
 
 import {
   BellIcon,
+  BookmarkIcon,
+  CompassIcon,
   HomeIcon,
   LogOutIcon,
   MenuIcon,
+  MessageCircleIcon,
   MoonIcon,
+  SearchIcon,
   SunIcon,
   UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
-import { useAuth, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
+import { useAuth, useUser, SignedIn, SignedOut, SignInButton, SignOutButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 
@@ -62,6 +66,30 @@ function MobileNavbar({ username }: { username?: string }) {
             {isSignedIn ? (
               <>
                 <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/explore">
+                    <CompassIcon className="w-4 h-4" />
+                    Explore
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/search">
+                    <SearchIcon className="w-4 h-4" />
+                    Search
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/messages">
+                    <MessageCircleIcon className="w-4 h-4" />
+                    Messages
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
+                  <Link href="/bookmarks">
+                    <BookmarkIcon className="w-4 h-4" />
+                    Saved
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="flex items-center gap-3 justify-start" asChild>
                   <Link href="/notifications">
                     <BellIcon className="w-4 h-4" />
                     Notifications
@@ -81,11 +109,13 @@ function MobileNavbar({ username }: { username?: string }) {
                 </SignOutButton>
               </>
             ) : (
-              <SignInButton mode="modal">
-                <Button variant="default" className="w-full">
-                  Sign In
-                </Button>
-              </SignInButton>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="default" className="w-full">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              </SignedOut>
             )}
           </nav>
         </SheetContent>

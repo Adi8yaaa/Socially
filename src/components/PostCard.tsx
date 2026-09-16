@@ -1,8 +1,11 @@
 "use client";
 
-import { createComment, deletePost, getPosts, toggleLike } from "@/actions/post.action";
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { toggleBookmark } from "@/actions/bookmark.action";
+import { createComment, deletePost, getPosts, repost, setReaction, toggleLike } from "@/actions/post.action";
+import { SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
+import type React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Card, CardContent } from "./ui/card";
 import Link from "next/link";
@@ -10,20 +13,50 @@ import { Avatar, AvatarImage } from "./ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { DeleteAlertDialog } from "./DeleteAlertDialog";
 import { Button } from "./ui/button";
-import { HeartIcon, LogInIcon, MessageCircleIcon, SendIcon } from "lucide-react";
+import {
+  BadgeCheckIcon,
+  BookmarkIcon,
+  CopyIcon,
+  HeartIcon,
+  LaughIcon,
+  LightbulbIcon,
+  LogInIcon,
+  MessageCircleIcon,
+  Repeat2Icon,
+  SendIcon,
+  SmilePlusIcon,
+  ThumbsUpIcon,
+} from "lucide-react";
 import { Textarea } from "./ui/textarea";
 
 type Posts = Awaited<ReturnType<typeof getPosts>>;
 type Post = Posts[number];
+type Reaction = "LIKE" | "LOVE" | "CELEBRATE" | "FUNNY" | "INSIGHTFUL" | "ANGRY";
+
+const reactionOptions: { type: Reaction; label: string; icon: React.ReactNode }[] = [
+  { type: "LIKE", label: "Like", icon: <ThumbsUpIcon className="size-4" /> },
+  { type: "LOVE", label: "Love", icon: <HeartIcon className="size-4" /> },
+  { type: "CELEBRATE", label: "Celebrate", icon: <SmilePlusIcon className="size-4" /> },
+  { type: "FUNNY", label: "Funny", icon: <LaughIcon className="size-4" /> },
+  { type: "INSIGHTFUL", label: "Insightful", icon: <LightbulbIcon className="size-4" /> },
+  { type: "ANGRY", label: "Angry", icon: <span className="text-sm">!</span> },
+];
 
 function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
   const { user } = useUser();
+  const router = useRouter();
   const [newComment, setNewComment] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [hasLiked, setHasLiked] = useState(post.likes.some((like) => like.userId === dbUserId));
-  const [optimisticLikes, setOptmisticLikes] = useState(post._count.likes);
+  const [hasLiked, setHasLiked] = useState(post.likes?.some((like) => like.userId === dbUserId) ?? false);
+  const [optimisticLikes, setOptmisticLikes] = useState(post._count?.likes ?? 0);
+  const [hasBookmarked, setHasBookmarked] = useState(post.bookmarks?.some((bookmark) => bookmark.userId === dbUserId) ?? false);
+  const [optimisticBookmarks, setOptimisticBookmarks] = useState(post._count?.bookmarks ?? 0);
+  const [selectedReaction, setSelectedReaction] = useState<Reaction | null>(
+    (post.reactions?.find((reaction) => reaction.userId === dbUserId)?.type as Reaction | undefined) ?? null,
+  );
+  const [optimisticReposts, setOptimisticReposts] = useState((post._count?.reposts ?? 0) + (post.shareCount ?? 0));
   const [showComments, setShowComments] = useState(false);
 
   const handleLike = async () => {
@@ -34,11 +67,48 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
       setOptmisticLikes((prev) => prev + (hasLiked ? -1 : 1));
       await toggleLike(post.id);
     } catch (error) {
-      setOptmisticLikes(post._count.likes);
-      setHasLiked(post.likes.some((like) => like.userId === dbUserId));
+      setOptmisticLikes(post._count?.likes ?? 0);
+      setHasLiked(post.likes?.some((like) => like.userId === dbUserId) ?? false);
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleReaction = async (reaction: Reaction) => {
+    const nextReaction = selectedReaction === reaction ? null : reaction;
+    setSelectedReaction(nextReaction);
+    const result = await setReaction(post.id, nextReaction);
+    if (!result?.success) {
+      setSelectedReaction(selectedReaction);
+      toast.error("Failed to update reaction");
+    }
+  };
+
+  const handleBookmark = async () => {
+    setHasBookmarked((previous) => !previous);
+    setOptimisticBookmarks((previous) => previous + (hasBookmarked ? -1 : 1));
+    const result = await toggleBookmark(post.id);
+    if (!result?.success) {
+      setHasBookmarked(hasBookmarked);
+      setOptimisticBookmarks(post._count?.bookmarks ?? 0);
+      toast.error("Failed to update bookmark");
+    }
+  };
+
+  const handleRepost = async () => {
+    const result = await repost(post.id);
+    if (result?.success) {
+      setOptimisticReposts((previous) => previous + 1);
+      toast.success("Shared to your profile");
+    } else {
+      toast.error("Failed to repost");
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/?post=${post.id}`;
+    await navigator.clipboard.writeText(url);
+    toast.success("Post link copied");
   };
 
   const handleAddComment = async () => {
@@ -49,6 +119,7 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
       if (result?.success) {
         toast.success("Comment posted successfully");
         setNewComment("");
+        router.refresh();
       }
     } catch (error) {
       toast.error("Failed to add comment");
@@ -62,8 +133,10 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
     try {
       setIsDeleting(true);
       const result = await deletePost(post.id);
-      if (result.success) toast.success("Post deleted successfully");
-      else throw new Error(result.error);
+      if (result.success) {
+        toast.success("Post deleted successfully");
+        router.refresh();
+      } else throw new Error(result.error);
     } catch (error) {
       toast.error("Failed to delete post");
     } finally {
@@ -88,9 +161,10 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 truncate">
                   <Link
                     href={`/profile/${post.author.username}`}
-                    className="font-semibold truncate"
+                    className="inline-flex items-center gap-1 font-semibold truncate"
                   >
                     {post.author.name}
+                    {post.author.isVerified && <BadgeCheckIcon className="size-4 text-blue-500" />}
                   </Link>
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                     <Link href={`/profile/${post.author.username}`}>@{post.author.username}</Link>
@@ -108,14 +182,29 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
           </div>
 
           {/* POST IMAGE */}
-          {post.image && (
-            <div className="rounded-lg overflow-hidden">
-              <img src={post.image} alt="Post content" className="w-full h-auto object-cover" />
+          {(Boolean(post.media?.length) || Boolean(post.image)) && (
+            <div className="grid gap-2">
+              {((post.media && post.media.length > 0) ? post.media : [{ id: post.id, url: post.image, type: "IMAGE" }]).map(
+                (media) =>
+                  media.url &&
+                  (media.type === "VIDEO" ? (
+                    <video key={media.id} controls className="w-full rounded-lg bg-muted">
+                      <source src={media.url} />
+                    </video>
+                  ) : (
+                    <img
+                      key={media.id}
+                      src={media.url}
+                      alt="Post content"
+                      className="w-full h-auto rounded-lg object-cover"
+                    />
+                  )),
+              )}
             </div>
           )}
 
           {/* LIKE & COMMENT BUTTONS */}
-          <div className="flex items-center pt-2 space-x-4">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
             {user ? (
               <Button
                 variant="ghost"
@@ -133,12 +222,14 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
                 <span>{optimisticLikes}</span>
               </Button>
             ) : (
-              <SignInButton mode="modal">
-                <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
-                  <HeartIcon className="size-5" />
-                  <span>{optimisticLikes}</span>
-                </Button>
-              </SignInButton>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
+                    <HeartIcon className="size-5" />
+                    <span>{optimisticLikes}</span>
+                  </Button>
+                </SignInButton>
+              </SignedOut>
             )}
 
             <Button
@@ -152,6 +243,49 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
               />
               <span>{post.comments.length}</span>
             </Button>
+
+            {user && (
+              <div className="flex items-center gap-1 rounded-md border px-1 py-1">
+                {reactionOptions.map((reaction) => (
+                  <Button
+                    key={reaction.type}
+                    type="button"
+                    variant={selectedReaction === reaction.type ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    title={reaction.label}
+                    onClick={() => handleReaction(reaction.type)}
+                  >
+                    {reaction.icon}
+                    <span className="hidden sm:inline">{reaction.label}</span>
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-muted-foreground gap-2 ${hasBookmarked ? "text-amber-500" : "hover:text-amber-500"}`}
+                onClick={handleBookmark}
+              >
+                <BookmarkIcon className={`size-5 ${hasBookmarked ? "fill-current" : ""}`} />
+                <span>{optimisticBookmarks}</span>
+              </Button>
+            )}
+
+            {user && (
+              <Button variant="ghost" size="sm" className="text-muted-foreground gap-2 hover:text-emerald-500" onClick={handleRepost}>
+                <Repeat2Icon className="size-5" />
+                <span>{optimisticReposts}</span>
+              </Button>
+            )}
+
+            <Button variant="ghost" size="sm" className="text-muted-foreground gap-2 hover:text-primary" onClick={handleCopyLink}>
+              <CopyIcon className="size-5" />
+              <span className="hidden sm:inline">Copy</span>
+            </Button>
           </div>
 
           {/* COMMENTS SECTION */}
@@ -159,7 +293,7 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
             <div className="space-y-4 pt-4 border-t">
               <div className="space-y-4">
                 {/* DISPLAY COMMENTS */}
-                {post.comments.map((comment) => (
+                {(post.comments ?? []).map((comment) => (
                   <div key={comment.id} className="flex space-x-3">
                     <Avatar className="size-8 flex-shrink-0">
                       <AvatarImage src={comment.author.image ?? "/avatar.png"} />
@@ -213,14 +347,16 @@ function PostCard({ post, dbUserId }: { post: Post; dbUserId: string | null }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-center p-4 border rounded-lg bg-muted/50">
-                  <SignInButton mode="modal">
-                    <Button variant="outline" className="gap-2">
-                      <LogInIcon className="size-4" />
-                      Sign in to comment
-                    </Button>
-                  </SignInButton>
-                </div>
+                <SignedOut>
+                  <div className="flex justify-center p-4 border rounded-lg bg-muted/50">
+                    <SignInButton mode="modal">
+                      <Button variant="outline" className="gap-2">
+                        <LogInIcon className="size-4" />
+                        Sign in to comment
+                      </Button>
+                    </SignInButton>
+                  </div>
+                </SignedOut>
               )}
             </div>
           )}

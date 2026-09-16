@@ -1,6 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button } from "./ui/button";
 import { getUserByClerkId } from "@/actions/user.action";
 import Link from "next/link";
@@ -87,16 +87,18 @@ const UnAuthenticatedSidebar = () => (
         <p className="text-center text-muted-foreground mb-4">
           Login to access your profile and connect with others.
         </p>
-        <SignInButton mode="modal">
-          <Button className="w-full" variant="outline">
-            Login
-          </Button>
-        </SignInButton>
-        <SignUpButton mode="modal">
-          <Button className="w-full mt-2" variant="default">
-            Sign Up
-          </Button>
-        </SignUpButton>
+        <SignedOut>
+          <SignInButton mode="modal">
+            <Button className="w-full" variant="outline">
+              Login
+            </Button>
+          </SignInButton>
+          <SignUpButton mode="modal">
+            <Button className="w-full mt-2" variant="default">
+              Sign Up
+            </Button>
+          </SignUpButton>
+        </SignedOut>
       </CardContent>
     </Card>
   </div>
